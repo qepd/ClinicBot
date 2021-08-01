@@ -51,7 +51,8 @@ namespace ClinicBot.Dialogs
                 case "VerCentroContacto":
                     await IntentVerCentroContacto(stepContext, luisResult, cancellationToken);
                     break;
-
+                case "VerCalificar":
+                    return await IntentCalificar(stepContext, luisResult, cancellationToken);
                 case "None":
                     await IntentNone(stepContext, luisResult, cancellationToken);
                     break;
@@ -59,6 +60,11 @@ namespace ClinicBot.Dialogs
                     break;
             }
             return await stepContext.NextAsync(cancellationToken: cancellationToken);
+        }
+
+        private Task<DialogTurnResult> IntentCalificar(WaterfallStepContext stepContext, RecognizerResult luisResult, CancellationToken cancellationToken)
+        {
+            throw new NotImplementedException();
         }
 
 
