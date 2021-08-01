@@ -64,10 +64,17 @@ namespace ClinicBot.Dialogs
 
         #region  IntentLuis  
 
-        private Task IntentVerCentroContacto(WaterfallStepContext stepContext, RecognizerResult luisResult, CancellationToken cancellationToken)
+        private async Task IntentVerCentroContacto(WaterfallStepContext stepContext, RecognizerResult luisResult, CancellationToken cancellationToken)
         {
-            string phoneDetail = $"Nuestros números de atención son los siguientes: {Environment.NewLine}"+
-                   $"+51 961784838{Environment.NewLine} +51 9"
+            string phoneDetail = $"Nuestros números de atención son los siguientes: {Environment.NewLine}"
+                + $"📞 +51 961784838{Environment.NewLine} 📞+51 961784839";
+            string addressDetail = $"Estamos ubicados en {Environment.NewLine}Calle Ica 123, Ica";
+
+            await stepContext.Context.SendActivityAsync(phoneDetail, cancellationToken: cancellationToken);
+            await Task.Delay(1000);
+            await stepContext.Context.SendActivityAsync(addressDetail, cancellationToken: cancellationToken);
+            await Task.Delay(1000);
+            await stepContext.Context.SendActivityAsync("En qué más te puedo ayudar", cancellationToken: cancellationToken);
         }
         private async Task IntentVerOpciones(WaterfallStepContext stepContext, RecognizerResult luisResult, CancellationToken cancellationToken)
         {
