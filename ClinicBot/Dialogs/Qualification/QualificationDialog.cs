@@ -65,5 +65,5 @@ namespace ClinicBot.Dialogs.Qualification
             return await stepContext.ContinueDialogAsync(cancellationToken: cancellationToken);
         }
     }
-}
-//HOLA PAPUS
+}//Nuevo codigo
+
