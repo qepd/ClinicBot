@@ -48,6 +48,10 @@ namespace ClinicBot.Dialogs
                 case "VerOpciones":
                     await IntentVerOpciones(stepContext, luisResult, cancellationToken);
                     break;
+                case "VerCentroContacto":
+                    await IntentVerCentroContacto(stepContext, luisResult, cancellationToken);
+                    break;
+
                 case "None":
                     await IntentNone(stepContext, luisResult, cancellationToken);
                     break;
@@ -56,7 +60,15 @@ namespace ClinicBot.Dialogs
             }
             return await stepContext.NextAsync(cancellationToken: cancellationToken);
         }
+
+
         #region  IntentLuis  
+
+        private Task IntentVerCentroContacto(WaterfallStepContext stepContext, RecognizerResult luisResult, CancellationToken cancellationToken)
+        {
+            string phoneDetail = $"Nuestros números de atención son los siguientes: {Environment.NewLine}"+
+                   $"+51 961784838{Environment.NewLine} +51 9"
+        }
         private async Task IntentVerOpciones(WaterfallStepContext stepContext, RecognizerResult luisResult, CancellationToken cancellationToken)
         {
 
@@ -87,6 +99,7 @@ namespace ClinicBot.Dialogs
 
         #endregion
 
+     
 
         private async Task<DialogTurnResult> FinalProcess(WaterfallStepContext stepContext, CancellationToken cancellationToken)
         {

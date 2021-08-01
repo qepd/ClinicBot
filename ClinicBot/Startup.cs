@@ -51,13 +51,8 @@ namespace ClinicBot
 
             //habilitamos para conectarnos a cosmodb
             services.AddDbContext<DataBaseService>(options =>
-            {
-                options.UseCosmos(
-                    Configuration["https://clinicbot-cosmos-db1.documents.azure.com:443/"],
-                    Configuration["w99kvGaIEH2AczRm7F5Khi2gtUF1pUgCotmsEDCuSGiQoHBs6vkIQcWVftKuTBoqYHrkdHSXqcy6agsbOVt1Fg=="],
-                    Configuration["botdb"]
-                    );
-            });
+            options.UseCosmos("https://clinicbot-cosmos-db1.documents.azure.com:443/","w99kvGaIEH2AczRm7F5Khi2gtUF1pUgCotmsEDCuSGiQoHBs6vkIQcWVftKuTBoqYHrkdHSXqcy6agsbOVt1Fg==", "botdb"));
+
             services.AddScoped<IDataBaseService, DataBaseService>();
 
 
