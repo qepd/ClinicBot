@@ -1,4 +1,7 @@
 ﻿using ClinicBot.Common.Cards;
+using ClinicBot.Data;
+using ClinicBot.Dialogs.CreateAppointment;
+using ClinicBot.Dialogs.Qualification;
 using ClinicBot.Infraestructure.Luis;
 using Microsoft.Bot.Builder;
 using Microsoft.Bot.Builder.Dialogs;
@@ -12,20 +15,25 @@ namespace ClinicBot.Dialogs
 {
     public class RootDialogs: ComponentDialog
     {
-        private readonly ILuisServices luisservice;
-        private ILuisServices _luisService;
+        private readonly ILuisServices _luisService;
+        private readonly IDataBaseService _databaseService;
 
-        public RootDialogs(ILuisServices luisService)
+        public RootDialogs(ILuisServices luisService, IDataBaseService databaseService)
         {
+            _databaseService = databaseService;
             _luisService = luisService;
             var waterfallSteps = new WaterfallStep[]
             {
                 InitialProcess,
                 FinalProcess
             };
+            AddDialog(new QualificationDialog(_databaseService));
+            AddDialog(new CreateAppointmentDialog(_databaseService));
+            AddDialog(new TextPrompt(nameof(TextPrompt)));
             AddDialog(new WaterfallDialog(nameof(WaterfallDialog), waterfallSteps));
             InitialDialogId = nameof(WaterfallDialog);
         }
+        
         private async Task<DialogTurnResult> InitialProcess(WaterfallStepContext stepContext, CancellationToken cancellationToken)
         {
             var luisResult = await _luisService._luisRecognizer.RecognizeAsync(stepContext.Context, cancellationToken);
@@ -53,6 +61,9 @@ namespace ClinicBot.Dialogs
                     break;
                 case "VerCalificar":
                     return await IntentCalificar(stepContext, luisResult, cancellationToken);
+                case "CrearCita":
+                    return await IntentCrearCita(stepContext, luisResult, cancellationToken);
+                    
                 case "None":
                     await IntentNone(stepContext, luisResult, cancellationToken);
                     break;
@@ -61,15 +72,17 @@ namespace ClinicBot.Dialogs
             }
             return await stepContext.NextAsync(cancellationToken: cancellationToken);
         }
-
-        private Task<DialogTurnResult> IntentCalificar(WaterfallStepContext stepContext, RecognizerResult luisResult, CancellationToken cancellationToken)
+        
+        private async Task<DialogTurnResult> IntentCrearCita(WaterfallStepContext stepContext, RecognizerResult luisResult, CancellationToken cancellationToken)
         {
-            throw new NotImplementedException();
+            return await stepContext.BeginDialogAsync(nameof(CreateAppointmentDialog), cancellationToken: cancellationToken);
         }
-
-
         #region  IntentLuis  
 
+        private async Task<DialogTurnResult> IntentCalificar(WaterfallStepContext stepContext, RecognizerResult luisResult, CancellationToken cancellationToken)
+        {
+            return await stepContext.BeginDialogAsync(nameof(QualificationDialog), cancellationToken: cancellationToken);
+        }
         private async Task IntentVerCentroContacto(WaterfallStepContext stepContext, RecognizerResult luisResult, CancellationToken cancellationToken)
         {
             string phoneDetail = $"Nuestros números de atención son los siguientes: {Environment.NewLine}"

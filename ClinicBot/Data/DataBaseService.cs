@@ -1,4 +1,6 @@
-﻿using ClinicBot.Common.Models.User;
+﻿using ClinicBot.Common.Models.MedicalAppointment;
+using ClinicBot.Common.Models.Qualification;
+using ClinicBot.Common.Models.User;
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
@@ -18,6 +20,8 @@ namespace ClinicBot.Data
             Database.EnsureCreatedAsync();
         }
         public DbSet<UserModel> User { get; set; }
+        public DbSet<QualificationModel> Qualification { get; set; }
+        public DbSet<MedicalAppointmentModel> MedicalAppointment { get; set; }
 
         public async Task<bool> SaveAsync()
         {
@@ -26,6 +30,9 @@ namespace ClinicBot.Data
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             modelBuilder.Entity<UserModel>().ToContainer("User").HasPartitionKey("channel").HasNoDiscriminator().HasKey("id");
+            modelBuilder.Entity<QualificationModel>().ToContainer("Qualification").HasPartitionKey("idUser").HasNoDiscriminator().HasKey("id");
+            modelBuilder.Entity<QualificationModel>().ToContainer("MedicalAppointment").HasPartitionKey("idUser").HasNoDiscriminator().HasKey("id");
+
         }
     }
 }

@@ -1,4 +1,6 @@
-﻿using Microsoft.Bot.Builder;
+﻿using ClinicBot.Common.Models.Qualification;
+using ClinicBot.Data;
+using Microsoft.Bot.Builder;
 using Microsoft.Bot.Builder.Dialogs;
 using Microsoft.Bot.Schema;
 using System;
@@ -11,21 +13,20 @@ namespace ClinicBot.Dialogs.Qualification
 {
     public class QualificationDialog : ComponentDialog
     {
-        public QualificationDialog()
+        private IDataBaseService _databaseService;
+        public QualificationDialog(IDataBaseService databaseService)
         {
+            _databaseService = databaseService;
             var waterfallSteps = new WaterfallStep[]
             {
-                ToShowButton,
+                ToShowButtom,
                 ValidateOption
             };
             AddDialog(new WaterfallDialog(nameof(WaterfallDialog), waterfallSteps));
             AddDialog(new TextPrompt(nameof(TextPrompt)));
         }
 
-        private Task<DialogTurnResult> ToShowButton(WaterfallStepContext stepContext, CancellationToken cancellationToken)
-        {
-            throw new NotImplementedException();
-        }
+
 
         private async Task<DialogTurnResult> ToShowButtom(WaterfallStepContext stepContext, CancellationToken cancellationToken)
         {
@@ -46,11 +47,11 @@ namespace ClinicBot.Dialogs.Qualification
             {
                 Actions = new List<CardAction>()
                 {
-                    new CardAction(){Title="1*",Value="1*",Type=ActionTypes.ImBack},
-                    new CardAction(){Title="2*",Value="2*",Type=ActionTypes.ImBack},
-                    new CardAction(){Title="3*",Value="3*",Type=ActionTypes.ImBack},
-                    new CardAction(){Title="4*",Value="4*",Type=ActionTypes.ImBack},
-                    new CardAction(){Title="5*",Value="5*",Type=ActionTypes.ImBack},
+                    new CardAction(){Title="1⭐",Value="1⭐",Type=ActionTypes.ImBack},
+                    new CardAction(){Title="2⭐",Value="2⭐",Type=ActionTypes.ImBack},
+                    new CardAction(){Title="3⭐",Value="3⭐",Type=ActionTypes.ImBack},
+                    new CardAction(){Title="4⭐",Value="4⭐",Type=ActionTypes.ImBack},
+                    new CardAction(){Title="5⭐",Value="5⭐",Type=ActionTypes.ImBack},
                 }
             };
             return reply as Activity;
@@ -62,7 +63,22 @@ namespace ClinicBot.Dialogs.Qualification
             await stepContext.Context.SendActivityAsync($"Gracias por tu {options}", cancellationToken: cancellationToken);
             await Task.Delay(1000);
             await stepContext.Context.SendActivityAsync("¿En que más te quedo ayudar?", cancellationToken: cancellationToken);
+            await stepContext.ContinueDialogAsync(cancellationToken: cancellationToken);
+            //Graba Calificación
+            await SaveQualification(stepContext, options);
             return await stepContext.ContinueDialogAsync(cancellationToken: cancellationToken);
+        }
+
+        private async Task SaveQualification(WaterfallStepContext stepContext, string options)
+        {
+            var qualificationModel = new QualificationModel();
+            qualificationModel.id = Guid.NewGuid().ToString();
+            qualificationModel.idUser = stepContext.Context.Activity.From.Id;
+            qualificationModel.Qualification = options;
+            qualificationModel.registerDate = DateTime.Now.Date;
+
+            await _databaseService.Qualification.AddAsync(qualificationModel);
+            await _databaseService.SaveAsync();
         }
     }
 }//Nuevo codigo

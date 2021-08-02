@@ -64,7 +64,7 @@ namespace ClinicBot
             //Asociamos la Interfaz que hemos creado para poder invocarla desde cualquier metodo que querramos
             //utilizar
             services.AddSingleton<ILuisServices, LuisService>();
-            services.AddSingleton<RootDialogs>();
+            services.AddTransient<RootDialogs>();
             // Create the bot as a transient. In this case the ASP Controller is expecting an IBot.
             services.AddTransient<IBot, ClinicBot<RootDialogs>>();
         }
