@@ -1,4 +1,5 @@
-﻿using ClinicBot.Common.Models.MedicalAppointment;
+﻿using ClinicBot.Common.Models.BotStateModel;
+using ClinicBot.Common.Models.MedicalAppointment;
 using ClinicBot.Common.Models.User;
 using ClinicBot.Data;
 using Microsoft.Bot.Builder;
@@ -17,10 +18,13 @@ namespace ClinicBot.Dialogs.CreateAppointment
     {
         private readonly IDataBaseService _databaseService;
         public static UserModel newUserModel = new UserModel();
-        public static MedicalAppointmentModel createAppointmentModel = new MedicalAppointmentModel();
+        public static MedicalAppointmentModel medicalAppointmentModel = new MedicalAppointmentModel();
 
-        public CreateAppointmentDialog(IDataBaseService databaseService)
+        private readonly IStatePropertyAccessor<BotStateModel> _userState;
+
+        public CreateAppointmentDialog(IDataBaseService databaseService, UserState userState)
         {
+            _userState = userState.CreateProperty<BotStateModel>(nameof(BotStateModel));
             _databaseService = databaseService;
             var waterfallStep = new WaterfallStep[]
         {
@@ -90,7 +94,7 @@ namespace ClinicBot.Dialogs.CreateAppointment
         private async Task<DialogTurnResult> SetTime(WaterfallStepContext stepContext, CancellationToken cancellationToken)
         {
             var medicalDate = stepContext.Context.Activity.Text;
-            medicalAppointmentModel.date = Convert.ToDateTime(medicalDate);
+            medicalAppointmentModel.date = DateTime.ParseExact(medicalDate, "dd/MM/yyyy", null);
 
             return await stepContext.PromptAsync(
             nameof(TextPrompt),

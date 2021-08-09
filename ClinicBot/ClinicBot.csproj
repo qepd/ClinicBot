@@ -6,6 +6,25 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="Common\Models\NewFolder1\**" />
+    <Compile Remove="Common\Models\NewFolder2\**" />
+    <Compile Remove="Common\Models\NewFolder3\**" />
+    <Compile Remove="Common\Models\NewFolder\**" />
+    <Content Remove="Common\Models\NewFolder1\**" />
+    <Content Remove="Common\Models\NewFolder2\**" />
+    <Content Remove="Common\Models\NewFolder3\**" />
+    <Content Remove="Common\Models\NewFolder\**" />
+    <EmbeddedResource Remove="Common\Models\NewFolder1\**" />
+    <EmbeddedResource Remove="Common\Models\NewFolder2\**" />
+    <EmbeddedResource Remove="Common\Models\NewFolder3\**" />
+    <EmbeddedResource Remove="Common\Models\NewFolder\**" />
+    <None Remove="Common\Models\NewFolder1\**" />
+    <None Remove="Common\Models\NewFolder2\**" />
+    <None Remove="Common\Models\NewFolder3\**" />
+    <None Remove="Common\Models\NewFolder\**" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Mvc.NewtonsoftJson" Version="3.1.1" />
     <PackageReference Include="Microsoft.Bot.Builder.AI.Luis" Version="4.9.4" />
     <PackageReference Include="Microsoft.Bot.Builder.Azure" Version="4.14.1" />

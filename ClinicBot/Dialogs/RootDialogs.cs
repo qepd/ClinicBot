@@ -18,7 +18,7 @@ namespace ClinicBot.Dialogs
         private readonly ILuisServices _luisService;
         private readonly IDataBaseService _databaseService;
 
-        public RootDialogs(ILuisServices luisService, IDataBaseService databaseService)
+        public RootDialogs(ILuisServices luisService, IDataBaseService databaseService, UserState userState)
         {
             _databaseService = databaseService;
             _luisService = luisService;
@@ -28,7 +28,7 @@ namespace ClinicBot.Dialogs
                 FinalProcess
             };
             AddDialog(new QualificationDialog(_databaseService));
-            AddDialog(new CreateAppointmentDialog(_databaseService));
+            AddDialog(new CreateAppointmentDialog(_databaseService, userState));
             AddDialog(new TextPrompt(nameof(TextPrompt)));
             AddDialog(new WaterfallDialog(nameof(WaterfallDialog), waterfallSteps));
             InitialDialogId = nameof(WaterfallDialog);
