@@ -5,6 +5,7 @@
 
 using ClinicBot.Data;
 using ClinicBot.Dialogs;
+using ClinicBot.Dialogs.SendGridEmail;
 using ClinicBot.Infraestructure.Luis;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -60,6 +61,9 @@ namespace ClinicBot
 
             // Create the Bot Framework Adapter with error handling enabled.
             services.AddSingleton<IBotFrameworkHttpAdapter, AdapterWithErrorHandler>();
+
+            //Agregamos el servicio de email
+            services.AddSingleton<ISendGridEmailService, SendGridEmailService>();
 
             //Asociamos la Interfaz que hemos creado para poder invocarla desde cualquier metodo que querramos
             //utilizar

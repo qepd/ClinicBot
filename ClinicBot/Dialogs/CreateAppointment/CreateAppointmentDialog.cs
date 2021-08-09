@@ -2,12 +2,14 @@
 using ClinicBot.Common.Models.MedicalAppointment;
 using ClinicBot.Common.Models.User;
 using ClinicBot.Data;
+using ClinicBot.Dialogs.SendGridEmail;
 using Microsoft.Bot.Builder;
 using Microsoft.Bot.Builder.Dialogs;
 using Microsoft.Bot.Schema;
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -19,11 +21,13 @@ namespace ClinicBot.Dialogs.CreateAppointment
         private readonly IDataBaseService _databaseService;
         public static UserModel newUserModel = new UserModel();
         public static MedicalAppointmentModel medicalAppointmentModel = new MedicalAppointmentModel();
+        private readonly ISendGridEmailService _sendGridEmailService;
 
         private readonly IStatePropertyAccessor<BotStateModel> _userState;
 
-        public CreateAppointmentDialog(IDataBaseService databaseService, UserState userState)
+        public CreateAppointmentDialog(IDataBaseService databaseService, UserState userState, ISendGridEmailService sendGridEmailService)
         {
+            _sendGridEmailService = sendGridEmailService;
             _userState = userState.CreateProperty<BotStateModel>(nameof(BotStateModel));
             _databaseService = databaseService;
             var waterfallStep = new WaterfallStep[]
@@ -40,41 +44,69 @@ namespace ClinicBot.Dialogs.CreateAppointment
 
             AddDialog(new WaterfallDialog(nameof(WaterfallDialog), waterfallStep));
             AddDialog(new TextPrompt(nameof(TextPrompt)));
+
+
+
+
+
+
         }
 
         private async Task<DialogTurnResult> SetPhone(WaterfallStepContext stepContext, CancellationToken cancellationToken)
         {
-
-
-
-            return await stepContext.PromptAsync(
-            nameof(TextPrompt),
-            new PromptOptions { Prompt = MessageFactory.Text("Por favor ingresa tú numero de telefono") },
-            cancellationToken
-            );
+            var userStateModel = await _userState.GetAsync(stepContext.Context, () => new BotStateModel());
+            if (userStateModel.medicalData)
+            {
+                return await stepContext.NextAsync(cancellationToken: cancellationToken);
+            }
+            else 
+            {
+              return await stepContext.PromptAsync(
+              nameof(TextPrompt),
+              new PromptOptions { Prompt = MessageFactory.Text("Por favor ingresa tú numero de telefono") },
+              cancellationToken
+              );
+            }
+       
         }
 
         private async Task<DialogTurnResult> SetFullName(WaterfallStepContext stepContext, CancellationToken cancellationToken)
         {
-            var userPhone = stepContext.Context.Activity.Text;
-            newUserModel.phone = userPhone;
+            var userStateModel = await _userState.GetAsync(stepContext.Context, () => new BotStateModel());
+            if (userStateModel.medicalData)
+            {
+                return await stepContext.NextAsync(cancellationToken: cancellationToken);
+            }
+            else {
+                var userPhone = stepContext.Context.Activity.Text;
+                newUserModel.phone = userPhone;
 
-            return await stepContext.PromptAsync(
-            nameof(TextPrompt),
-            new PromptOptions { Prompt = MessageFactory.Text("Ahora ingresa tu nombre completo :") },
-            cancellationToken
-            );
+                return await stepContext.PromptAsync(
+                nameof(TextPrompt),
+                new PromptOptions { Prompt = MessageFactory.Text("Ahora ingresa tu nombre completo :") },
+                cancellationToken
+                );
+            }
+           
         }
 
         private async Task<DialogTurnResult> SetEmail(WaterfallStepContext stepContext, CancellationToken cancellationToken)
         {
-            var fullNameUser = stepContext.Context.Activity.Text;
-            newUserModel.fullName = fullNameUser;
-            return await stepContext.PromptAsync(
-            nameof(TextPrompt),
-            new PromptOptions { Prompt = MessageFactory.Text("Ahora ingresa tu correo : ") },
-            cancellationToken
-            );
+            var userStateModel = await _userState.GetAsync(stepContext.Context, () => new BotStateModel());
+            if (userStateModel.medicalData)
+            {
+                return await stepContext.NextAsync(cancellationToken: cancellationToken);
+            }
+            else {
+                var fullNameUser = stepContext.Context.Activity.Text;
+                newUserModel.fullName = fullNameUser;
+                return await stepContext.PromptAsync(
+                nameof(TextPrompt),
+                new PromptOptions { Prompt = MessageFactory.Text("Ahora ingresa tu correo : ") },
+                cancellationToken
+                );
+            }
+          
         }
 
         private async Task<DialogTurnResult> SetDate(WaterfallStepContext stepContext, CancellationToken cancellationToken)
@@ -90,11 +122,12 @@ namespace ClinicBot.Dialogs.CreateAppointment
             cancellationToken
             );
         }
-
+      
         private async Task<DialogTurnResult> SetTime(WaterfallStepContext stepContext, CancellationToken cancellationToken)
         {
+            CultureInfo provider = CultureInfo.InvariantCulture;
             var medicalDate = stepContext.Context.Activity.Text;
-            medicalAppointmentModel.date = DateTime.ParseExact(medicalDate, "dd/MM/yyyy", null);
+            medicalAppointmentModel.date = DateTime.ParseExact(medicalDate, "dd/MM/yyyy", provider);
 
             return await stepContext.PromptAsync(
             nameof(TextPrompt),
@@ -148,6 +181,8 @@ namespace ClinicBot.Dialogs.CreateAppointment
                     $"{Environment.NewLine}⏰ Hora: {medicalAppointmentModel.time}";
 
                 await stepContext.Context.SendActivityAsync(summaryMedical, cancellationToken: cancellationToken);
+                //Enviar email
+                await SendEmail(userModel, medicalAppointmentModel);
                 await Task.Delay(1000);
                 await stepContext.Context.SendActivityAsync("En que mas puedo ayudarte?", cancellationToken: cancellationToken);
                 medicalAppointmentModel = new MedicalAppointmentModel();
@@ -158,6 +193,23 @@ namespace ClinicBot.Dialogs.CreateAppointment
                 await stepContext.Context.SendActivityAsync("No hay problema será la proxima", cancellationToken: cancellationToken);
             }
             return await stepContext.ContinueDialogAsync(cancellationToken: cancellationToken);
+        }
+
+        private async Task SendEmail(UserModel userModel, MedicalAppointmentModel medicalAppointmentModel) 
+        {
+            string contentEmail = $"Hola {userModel.fullName}, <b/><b> Se creó una cita con la siguiente información:" +
+                  $"<br>Fecha: {medicalAppointmentModel.date.ToShortDateString()}" +
+                  $"<br>Hora: {medicalAppointmentModel.time}<b/><b>Saludos.";
+
+            await _sendGridEmailService.Execute(
+                "20162793@sistemasunica.edu.pe",
+                "Jose Luis Perez",
+                userModel.email,
+                userModel.fullName,
+                "Confirmación de cita",
+                "",
+                contentEmail
+                );
         }
 
         private Activity CreateButtonConfirmation()
