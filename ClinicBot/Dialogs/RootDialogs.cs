@@ -4,6 +4,7 @@ using ClinicBot.Dialogs.CreateAppointment;
 using ClinicBot.Dialogs.Qualification;
 using ClinicBot.Dialogs.SendGridEmail;
 using ClinicBot.Infraestructure.Luis;
+using ClinicBot.Infraestructure.QnAMakerAI;
 using Microsoft.Bot.Builder;
 using Microsoft.Bot.Builder.Dialogs;
 using System;
@@ -19,9 +20,12 @@ namespace ClinicBot.Dialogs
         private readonly ILuisServices _luisService;
         private readonly IDataBaseService _databaseService;
         private readonly ISendGridEmailService _sendGridEmailService;
+        private readonly IQnAMakerAIService _qnAMakerAIService;
 
-        public RootDialogs(ILuisServices luisService, IDataBaseService databaseService, UserState userState, ISendGridEmailService sendGridEmailService)
+        public RootDialogs(ILuisServices luisService, IDataBaseService databaseService, UserState userState,
+            ISendGridEmailService sendGridEmailService , IQnAMakerAIService qnAMakerAIService)
         {
+            _qnAMakerAIService = qnAMakerAIService;
             _sendGridEmailService = sendGridEmailService;
             _databaseService = databaseService;
             _luisService = luisService;
@@ -31,7 +35,7 @@ namespace ClinicBot.Dialogs
                 FinalProcess
             };
             AddDialog(new QualificationDialog(_databaseService));
-            AddDialog(new CreateAppointmentDialog(_databaseService, userState,_sendGridEmailService));
+            AddDialog(new CreateAppointmentDialog(_databaseService, userState,_sendGridEmailService,_luisService));
             AddDialog(new TextPrompt(nameof(TextPrompt)));
             AddDialog(new WaterfallDialog(nameof(WaterfallDialog), waterfallSteps));
             InitialDialogId = nameof(WaterfallDialog);
@@ -159,12 +163,26 @@ namespace ClinicBot.Dialogs
 
         private async Task IntentNone(WaterfallStepContext stepContext, RecognizerResult luisResult, CancellationToken cancellationToken)
         {
-            await stepContext.Context.SendActivityAsync("No entiendo lo que me dices", cancellationToken: cancellationToken);
-        }
+            var resultQnA = await _qnAMakerAIService._qnaMakerResult.GetAnswersAsync(stepContext.Context);
+            var score = resultQnA.FirstOrDefault()?.Score;
+            string response = resultQnA.FirstOrDefault()?.Answer;
+            if (score >= 0.5)
+            {
+                await stepContext.Context.SendActivityAsync(response, cancellationToken: cancellationToken);
+        
+                }
+                else
+                  {
+                await stepContext.Context.SendActivityAsync("No entiendo lo que me dices.", cancellationToken: cancellationToken);
+                await Task.Delay(1000);
+                await IntentVerOpciones(stepContext, luisResult, cancellationToken);
+                }
+         }
+
 
         #endregion
 
-     
+
 
         private async Task<DialogTurnResult> FinalProcess(WaterfallStepContext stepContext, CancellationToken cancellationToken)
         {

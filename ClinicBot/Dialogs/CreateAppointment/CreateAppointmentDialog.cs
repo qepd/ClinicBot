@@ -1,8 +1,10 @@
 ﻿using ClinicBot.Common.Models.BotStateModel;
+using ClinicBot.Common.Models.EntityLuis;
 using ClinicBot.Common.Models.MedicalAppointment;
 using ClinicBot.Common.Models.User;
 using ClinicBot.Data;
 using ClinicBot.Dialogs.SendGridEmail;
+using ClinicBot.Infraestructure.Luis;
 using Microsoft.Bot.Builder;
 using Microsoft.Bot.Builder.Dialogs;
 using Microsoft.Bot.Schema;
@@ -24,9 +26,12 @@ namespace ClinicBot.Dialogs.CreateAppointment
         private readonly ISendGridEmailService _sendGridEmailService;
 
         private readonly IStatePropertyAccessor<BotStateModel> _userState;
+        static string userText;
+        private readonly ILuisServices _luisService;
 
-        public CreateAppointmentDialog(IDataBaseService databaseService, UserState userState, ISendGridEmailService sendGridEmailService)
+        public CreateAppointmentDialog(IDataBaseService databaseService, UserState userState, ISendGridEmailService sendGridEmailService, ILuisServices luiService)
         {
+            _luisService = _luisService;
             _sendGridEmailService = sendGridEmailService;
             _userState = userState.CreateProperty<BotStateModel>(nameof(BotStateModel));
             _databaseService = databaseService;
@@ -45,15 +50,11 @@ namespace ClinicBot.Dialogs.CreateAppointment
             AddDialog(new WaterfallDialog(nameof(WaterfallDialog), waterfallStep));
             AddDialog(new TextPrompt(nameof(TextPrompt)));
 
-
-
-
-
-
         }
 
         private async Task<DialogTurnResult> SetPhone(WaterfallStepContext stepContext, CancellationToken cancellationToken)
         {
+            userText = stepContext.Context.Activity.Text;
             var userStateModel = await _userState.GetAsync(stepContext.Context, () => new BotStateModel());
             if (userStateModel.medicalData)
             {
@@ -113,22 +114,38 @@ namespace ClinicBot.Dialogs.CreateAppointment
         {
             var userEmail = stepContext.Context.Activity.Text;
             newUserModel.email = userEmail;
-
-            string text = $"Ahora necesito la fecha de la cita médica con el siguiente formato :" + $"{Environment.NewLine}dd/mm/yyyy";
-
-            return await stepContext.PromptAsync(
-            nameof(TextPrompt),
-            new PromptOptions { Prompt = MessageFactory.Text(text) },
-            cancellationToken
+            var newStepContext= stepContext;
+            newStepContext.Context.Activity.Text= userText;
+            var luisResult = await _luisService._luisRecognizer.RecognizeAsync(newStepContext.Context, cancellationToken);
+            var Entity = luisResult.Entities.ToObject<EntityLuisModel>();
+            if(Entity.datetime != null)
+            { 
+              var date = Entity.datetime.First().timex.First().Replace("XXXX", DateTime.Now.Year.ToString());
+                if(date.Length> 10)
+                    date = date.Remove(10);
+                medicalAppointmentModel.date = DateTime.Parse(date);
+                return  await stepContext.NextAsync(cancellationToken: cancellationToken);
+            }
+            else
+            {
+              string text = $"Ahora necesito la fecha de la cita médica con el siguiente formato :" + $"{Environment.NewLine}dd/mm/yyyy";
+                return await stepContext.PromptAsync(
+                nameof(TextPrompt),
+                new PromptOptions { Prompt = MessageFactory.Text(text) },
+                cancellationToken
             );
+          }
         }
       
         private async Task<DialogTurnResult> SetTime(WaterfallStepContext stepContext, CancellationToken cancellationToken)
         {
             CultureInfo provider = CultureInfo.InvariantCulture;
-            var medicalDate = stepContext.Context.Activity.Text;
-            medicalAppointmentModel.date = DateTime.ParseExact(medicalDate, "dd/MM/yyyy", provider);
-
+            if(medicalAppointmentModel.date == DateTime.MinValue)
+            { 
+               var medicalDate = stepContext.Context.Activity.Text;
+               medicalAppointmentModel.date = DateTime.ParseExact(medicalDate, "dd/MM/yyyy", provider);
+            }
+       
             return await stepContext.PromptAsync(
             nameof(TextPrompt),
             new PromptOptions { Prompt = CreateButtonsTime() },
@@ -186,7 +203,6 @@ namespace ClinicBot.Dialogs.CreateAppointment
                 await Task.Delay(1000);
                 await stepContext.Context.SendActivityAsync("En que mas puedo ayudarte?", cancellationToken: cancellationToken);
                 medicalAppointmentModel = new MedicalAppointmentModel();
-
             }
             else
             {
